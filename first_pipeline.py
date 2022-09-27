@@ -3,7 +3,6 @@ from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime
 from random import randint
-
 def _training_model(model):
   return randint(1,10)
 
@@ -17,7 +16,7 @@ def _choosing_best_model(ti):
     return 'accurate'
   return 'inaccurate'
 
-with DAG("my_dag", start_date=datetime(2022,1,1), schedule_interval="@dayle", catchup=False) as dag:
+with DAG("my_dag", start_date=datetime(2022,1,1), schedule_interval='@dayle', catchup=False) as dag:
   training_model_tasks = [
     PythonOperator(
       task_id=f"training_model_{model_id}",

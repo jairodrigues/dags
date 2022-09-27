@@ -1,45 +1,43 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator, BranchPythonOperator
+# [START import_module]
+from airflow.models import DAG
+from datetime import datetime, timedelta
 from airflow.operators.bash import BashOperator
-from datetime import datetime
-from random import randint
+# [END import_module]
 
-def _choosing_best_model(ti):
-  accuracies = ti.xcom_pull(task_ids=[
-  'training_model_A',
-  'training_model_B',
-  'training_model_C'
-  ])
-  if max(accuracies) > 8:
-    return 'accurate'
-  return 'inaccurate'
+# [START default_args]
+default_args = {
+    'owner': 'Jairo Rodrigues',
+    'depends_on_past': False,
+    'email': ['jairo.goncalves90@gmail.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5)}
+# [END default_args]
 
-def _training_model(model):
-  return randint(1, 10)
+# [START instantiate_dag]
+dag = DAG(
+    'test-data-pipeline',
+    default_args=default_args,
+    start_date=datetime(2021, 3, 18),
+    schedule_interval='@weekly',
+    tags=['test', 'development', 'bash'])
+# [END instantiate_dag]
 
-with DAG("my_dag",
-  start_date=datetime(2021, 1 ,1), 
-  schedule_interval='@daily', 
-  catchup=False) as dag:
-    training_model_tasks = [
-      PythonOperator(
-        task_id=f"training_model_{model_id}",
-        python_callable=_training_model,
-        op_kwargs={
-          "model": model_id
-        }
-      ) for model_id in ['A', 'B', 'C']
-    ]
-    choosing_best_model = BranchPythonOperator(
-      task_id="choosing_best_model",
-      python_callable=_choosing_best_model
-    )
-    accurate = BashOperator(
-      task_id="accurate",
-      bash_command="echo 'accurate'"
-    )
-    inaccurate = BashOperator(
-      task_id="inaccurate",
-      bash_command=" echo 'inaccurate'"
-    )
-training_model_tasks >> choosing_best_model >> [accurate, inaccurate]
+# [START basic_task]
+t1 = BashOperator(
+    task_id='print_date',
+    bash_command='date',
+    dag=dag)
+
+t2 = BashOperator(
+    task_id='sleep',
+    depends_on_past=False,
+    bash_command='sleep 5',
+    retries=3,
+    dag=dag)
+# [END basic_task]
+
+# [START task_sequence]
+t1 >> [t2]
+# [END task_sequence]
